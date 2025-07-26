@@ -1,11 +1,9 @@
 import streamlit as st
 import requests
-import os
-from dotenv import load_dotenv
 
-load_dotenv("secret.env")
-token = os.getenv("GITHUB_TOKEN")
+token = st.secrets["GITHUB_TOKEN"]
 headers = {"Authorization": f"token {token}"} if token else {}
+
 
 def get_user_repos(username):
     url = f"https://api.github.com/users/{username}/repos"
