@@ -87,6 +87,45 @@ def list_all_files(owner, repo, path=""):
     return all_files
 
 
+def build_tree(paths):
+    """
+    تبني شجرة مجلدات وملفات من قائمة المسارات.
+    المخرجات: dict حيث المفتاح إما اسم مجلد أو ملف،
+    والقيمة dict فرعي (للمجلدات) أو None (لملف).
+    """
+    tree = {}
+    for path in paths:
+        parts = path.split("/")
+        current = tree
+        for i, part in enumerate(parts):
+            if part not in current:
+                if i == len(parts) - 1:
+                    # ملف - لا يحتوي على أطفال
+                    current[part] = None
+                else:
+                    current[part] = {}
+            current = current[part] if current[part] is not None else {}
+    return tree
+
+
+def render_tree(tree, prefix="", is_last=True):
+    """
+    ترسم الشجرة كنص شجري مشابه لهيكل Unix tree.
+    prefix: سلسلة بادئة للتنسيق (مسافات أو خطوط).
+    is_last: هل العنصر الأخير في المستوى (لتحديد شكل الخط).
+    """
+    lines = []
+    entries = list(tree.items())
+    n = len(entries)
+    for idx, (name, subtree) in enumerate(entries):
+        connector = "└── " if idx == n - 1 else "├── "
+        lines.append(prefix + connector + name + ("/" if subtree is not None else ""))
+        if subtree is not None:
+            extension = "    " if idx == n - 1 else "│   "
+            lines.extend(render_tree(subtree, prefix + extension, idx == n - 1))
+    return lines
+
+
 def main():
     st.title("مستعرض ملفات GitHub مع اختيار ونسخ")
 
@@ -125,12 +164,15 @@ def main():
                 st.session_state.show_all_paths = not st.session_state.show_all_paths
 
             if st.session_state.show_all_paths:
-                with st.spinner("جاري جلب كل الملفات... هذا قد يستغرق بعض الوقت"):
+                with st.spinner("جاري جلب كل الملفات... قد يستغرق بعض الوقت"):
                     all_files = list_all_files(username, repo_choice)
                     if all_files:
-                        all_paths_text = "\n".join(all_files)
-                        st.text_area("مسارات جميع ملفات المستودع:", all_paths_text, height=300)
-                        copy_button(all_paths_text, key="copy_all_paths", label="نسخ مسارات جميع الملفات")
+                        tree = build_tree(all_files)
+                        tree_lines = render_tree(tree, prefix="")
+                        # نضيف اسم المستودع (المشروع) في البداية:
+                        text_tree = repo_choice + "/\n" + "\n".join(tree_lines)
+                        st.text_area("الشكل الشجري لمسارات الملفات:", text_tree, height=400)
+                        copy_button(text_tree, key="copy_tree", label="نسخ المسارات بشكل شجري")
                     else:
                         st.warning("لم يتم العثور على ملفات في المستودع.")
 
@@ -174,52 +216,4 @@ def main():
 
                     for folder in folders:
                         with st.expander(folder["name"]):
-                            folder_contents = get_github_contents(username, repo_choice, folder["path"])
-                            if folder_contents:
-                                folder_files = [f for f in folder_contents if f["type"] == "file"]
-                                for f in folder_files:
-                                    checked = f["path"] in st.session_state.selected_files
-                                    new_val = st.checkbox(f"{folder['name']}/{f['name']}", value=checked, key=f["path"])
-                                    if new_val:
-                                        selected_files_local.add(f["path"])
-                                    else:
-                                        selected_files_local.discard(f["path"])
-                    st.session_state.selected_files = selected_files_local
-
-                if "show_selected_files_content" not in st.session_state:
-                    st.session_state.show_selected_files_content = False
-
-                if st.button("إظهار/إخفاء محتويات الملفات المحددة"):
-                    st.session_state.show_selected_files_content = not st.session_state.show_selected_files_content
-
-                if st.session_state.show_selected_files_content:
-                    if not st.session_state.selected_files:
-                        st.warning("حدد ملف واحد أو أكثر أولاً!")
-                    else:
-                        combined_text = ""
-                        for fpath in st.session_state.selected_files:
-                            file_data = None
-                            for f in files:
-                                if f["path"] == fpath:
-                                    file_data = f
-                                    break
-                            if not file_data:
-                                for folder in folders:
-                                    folder_contents = get_github_contents(username, repo_choice, folder["path"])
-                                    if folder_contents:
-                                        for ff in folder_contents:
-                                            if ff["path"] == fpath:
-                                                file_data = ff
-                                                file_data["folder_name"] = folder["name"]
-                                                break
-                            if file_data:
-                                content = get_file_content(file_data["download_url"])
-                                prefix = f"{file_data.get('folder_name', '')}/" if "folder_name" in file_data else ""
-                                combined_text += f"===== {prefix}{file_data['name']} =====\n{content}\n\n"
-
-                        st.text_area("محتويات الملفات المحددة", combined_text, height=300)
-                        copy_button(combined_text, key="combined", label="نسخ كل المحتويات")
-
-
-if __name__ == "__main__":
-    main()
+                            folder_contents = get_github_contents(username, repo_choice, folder
