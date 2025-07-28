@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
+from streamlit_autorefresh import st_autorefresh
 
+# استخرج التوكن من secrets (تأكد من وجوده في settings)
 token = st.secrets.get("GITHUB_TOKEN", "")
 headers = {"Authorization": f"token {token}"} if token else {}
 
@@ -22,7 +24,7 @@ def get_github_contents(owner, repo, path=""):
         st.error(f"خطأ في جلب محتويات المستودع: {r.status_code}")
         return None
 
-@st.cache_data(show_spinner=False)
+# **هنا حذفت @st.cache_data علشان تجيب كل مرة أحدث نسخة**
 def get_file_content(download_url):
     r = requests.get(download_url, headers=headers)
     if r.status_code == 200:
@@ -69,46 +71,16 @@ def copy_button(text, key, label):
     st.components.v1.html(js, height=70)
 
 def main():
-    st.title("مستعرض ملفات GitHub مع اختيار ونسخ")
+    st.title("مستعرض ملفات GitHub مع تحديث مباشر")
 
-    # زر لتحديث الملفات وجلب جديد من GitHub (يمسح الحالة السابقة)
-    if st.button("🔄 تحديث المحتويات"):
-        keys_to_clear = [
-            "selected_files", "show_folders", "show_selected_files_content"
-        ]
-        for key in keys_to_clear:
-            if key in st.session_state:
-                del st.session_state[key]
+    # تحديث تلقائي للصفحة كل 60 ثانية
+    st_autorefresh(interval=60000, limit=None, key="auto_refresh")
+
+    # زر تحديث يدوي
+    if st.button("تحديث الآن"):
         st.experimental_rerun()
 
-    # تعريف متغيرات الحالة لو لم تكن موجودة
-    if "selected_files" not in st.session_state:
-        st.session_state.selected_files = set()
-    if "show_folders" not in st.session_state:
-        st.session_state.show_folders = False
-    if "show_selected_files_content" not in st.session_state:
-        st.session_state.show_selected_files_content = False
-    if "show_intro" not in st.session_state:
-        st.session_state.show_intro = False
-
-    # عرض الرسالة التعريفية مع زر إظهار/إخفاء
-    if st.button("شرح وتعريف"):
-        st.session_state.show_intro = not st.session_state.show_intro
-
-    if st.session_state.show_intro:
-        intro_text = """مرحبا جات جي بي تي كيف حالك
-عندي مشروع معظمه بايثون يعتمد على ستريم لت
-سارسل محتوى ملفات المشروع اسم المشروع ومحتواه 
-من اطلبه منك ببساطة تنتضر ان ارسل لك المحتويات كاملة ثم تنتضر مني  طلباتي
-ما اريده منك بعد تاكيد الطلبات او التغييرات ان تقول لي اسم الملف الذي يجب تغييره وان ترسله كاملا معدلا 
-ان كان اكثر من ملف يتيغر عادي ارسله واحد ورا التالي
-ان كان هناك ملف اضافي قل اسمه وارسله كاملا
-ان كانت هناك اضافة مكتبة او ماشابه نبهني عليها
-"""
-        st.text_area("المحتوى قابل للنسخ", intro_text, height=200)
-        copy_button(intro_text, key="intro_copy", label="نسخ نص التعريف")
-
-    username = "mahmoudadil2001"
+    username = "mahmoudadil2001"  # غيره حسب الحاجة
     repos = get_user_repos(username)
 
     if repos:
@@ -123,11 +95,14 @@ def main():
 
                 st.write("### اختر الملفات:")
 
-                selected_files_local = set(st.session_state.selected_files)  # نسخة للتعديل محلي
+                if "selected_files" not in st.session_state:
+                    st.session_state.selected_files = set()
 
-                # عرض ملفات جذر المستودع
+                selected_files_local = set()
+
+                # ملفات جذر المستودع
                 for file in files:
-                    checked = file["path"] in selected_files_local
+                    checked = file["path"] in st.session_state.selected_files
                     new_val = st.checkbox(file["name"], value=checked, key=file["path"])
                     if new_val:
                         selected_files_local.add(file["path"])
@@ -135,6 +110,9 @@ def main():
                         selected_files_local.discard(file["path"])
 
                 # زر تبديل عرض الفولدرات
+                if "show_folders" not in st.session_state:
+                    st.session_state.show_folders = False
+
                 if st.button("Show Folders"):
                     st.session_state.show_folders = not st.session_state.show_folders
 
@@ -147,17 +125,20 @@ def main():
                             if folder_contents:
                                 folder_files = [f for f in folder_contents if f["type"] == "file"]
                                 for f in folder_files:
-                                    checked = f["path"] in selected_files_local
+                                    checked = f["path"] in st.session_state.selected_files
                                     new_val = st.checkbox(f"{folder['name']}/{f['name']}", value=checked, key=f["path"])
                                     if new_val:
                                         selected_files_local.add(f["path"])
                                     else:
                                         selected_files_local.discard(f["path"])
 
-                # تحديث الحالة للملفات المختارة
+                # تحديث حالة الملفات المختارة في الجلسة
                 st.session_state.selected_files = selected_files_local
 
                 # زر تبديل عرض محتويات الملفات المحددة
+                if "show_selected_files_content" not in st.session_state:
+                    st.session_state.show_selected_files_content = False
+
                 if st.button("إظهار/إخفاء محتويات الملفات المحددة"):
                     st.session_state.show_selected_files_content = not st.session_state.show_selected_files_content
 
