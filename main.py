@@ -1,10 +1,9 @@
 import streamlit as st
 import requests
-from streamlit_autorefresh import st_autorefresh
 
-# استخرج التوكن من secrets (تأكد من وجوده في settings)
-token = st.secrets.get("GITHUB_TOKEN", "")
+token = st.secrets["GITHUB_TOKEN"]
 headers = {"Authorization": f"token {token}"} if token else {}
+
 
 def get_user_repos(username):
     url = f"https://api.github.com/users/{username}/repos"
@@ -15,6 +14,7 @@ def get_user_repos(username):
         st.error(f"خطأ في جلب المستودعات: {r.status_code}")
         return []
 
+
 def get_github_contents(owner, repo, path=""):
     url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
     r = requests.get(url, headers=headers)
@@ -24,13 +24,15 @@ def get_github_contents(owner, repo, path=""):
         st.error(f"خطأ في جلب محتويات المستودع: {r.status_code}")
         return None
 
-# **هنا حذفت @st.cache_data علشان تجيب كل مرة أحدث نسخة**
+
+@st.cache_data(show_spinner=False)
 def get_file_content(download_url):
     r = requests.get(download_url, headers=headers)
     if r.status_code == 200:
         return r.text
     else:
         return "⚠️ خطأ في جلب المحتوى"
+
 
 def copy_button(text, key, label):
     escaped = (
@@ -70,17 +72,31 @@ def copy_button(text, key, label):
     """
     st.components.v1.html(js, height=70)
 
+
 def main():
-    st.title("مستعرض ملفات GitHub مع تحديث مباشر")
+    st.title("مستعرض ملفات GitHub مع اختيار ونسخ")
 
-    # تحديث تلقائي للصفحة كل 60 ثانية
-    st_autorefresh(interval=60000, limit=None, key="auto_refresh")
+    # الرسالة التعريفية القابلة للفتح/الإغلاق
+    if "show_intro" not in st.session_state:
+        st.session_state.show_intro = False
 
-    # زر تحديث يدوي
-    if st.button("تحديث الآن"):
-        st.experimental_rerun()
+    if st.button("شرح وتعريف"):
+        st.session_state.show_intro = not st.session_state.show_intro
 
-    username = "mahmoudadil2001"  # غيره حسب الحاجة
+    if st.session_state.show_intro:
+        intro_text = """مرحبا جات جي بي تي كيف حالك
+عندي مشروع معظمه بايثون يعتمد على ستريم لت
+سارسل محتوى ملفات المشروع اسم المشروع ومحتواه 
+من اطلبه منك ببساطة تنتضر ان ارسل لك المحتويات كاملة ثم تنتضر مني  طلباتي
+ما اريده منك بعد تاكيد الطلبات او التغييرات ان تقول لي اسم الملف الذي يجب تغييره وان ترسله كاملا معدلا 
+ان كان اكثر من ملف يتيغر عادي ارسله واحد ورا التالي
+ان كان هناك ملف اضافي قل اسمه وارسله كاملا
+ان كانت هناك اضافة مكتبة او ماشابه نبهني عليها
+"""
+        st.text_area("المحتوى قابل للنسخ", intro_text, height=200)
+        copy_button(intro_text, key="intro_copy", label="نسخ نص التعريف")
+
+    username = "mahmoudadil2001"
     repos = get_user_repos(username)
 
     if repos:
@@ -169,6 +185,7 @@ def main():
 
                         st.text_area("محتويات الملفات المحددة", combined_text, height=300)
                         copy_button(combined_text, key="combined", label="نسخ كل المحتويات")
+
 
 if __name__ == "__main__":
     main()
