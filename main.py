@@ -1,12 +1,13 @@
 import streamlit as st
 import requests
+import time
 
 token = st.secrets["GITHUB_TOKEN"]
 headers = {"Authorization": f"token {token}"} if token else {}
 
-
+# ✅ كل دالة الآن فيها باراميتر وقت لكسر الكاش
 def get_user_repos(username):
-    url = f"https://api.github.com/users/{username}/repos"
+    url = f"https://api.github.com/users/{username}/repos?_={int(time.time())}"
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         return r.json()
@@ -14,9 +15,8 @@ def get_user_repos(username):
         st.error(f"خطأ في جلب المستودعات: {r.status_code}")
         return []
 
-
 def get_github_contents(owner, repo, path=""):
-    url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+    url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}?_={int(time.time())}"
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         return r.json()
@@ -24,14 +24,13 @@ def get_github_contents(owner, repo, path=""):
         st.error(f"خطأ في جلب محتويات المستودع: {r.status_code}")
         return None
 
-
 def get_file_content(download_url):
-    r = requests.get(download_url, headers=headers)
+    url = f"{download_url}?_={int(time.time())}"
+    r = requests.get(url, headers=headers)
     if r.status_code == 200:
         return r.text
     else:
         return "⚠️ خطأ في جلب المحتوى"
-
 
 def copy_button(text, key, label):
     escaped = (
@@ -71,9 +70,13 @@ def copy_button(text, key, label):
     """
     st.components.v1.html(js, height=70)
 
-
 def main():
     st.title("مستعرض ملفات GitHub مع اختيار ونسخ")
+
+    # ✅ زر لتحديث البيانات ومسح كل القيم القديمة
+    if st.button("🔄 تحديث الريبو"):
+        st.session_state.clear()
+        st.rerun()
 
     if "show_intro" not in st.session_state:
         st.session_state.show_intro = False
@@ -179,7 +182,6 @@ def main():
 
                         st.text_area("محتويات الملفات المحددة", combined_text, height=300)
                         copy_button(combined_text, key="combined", label="نسخ كل المحتويات")
-
 
 if __name__ == "__main__":
     main()
