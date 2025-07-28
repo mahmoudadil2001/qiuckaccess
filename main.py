@@ -216,4 +216,52 @@ def main():
 
                     for folder in folders:
                         with st.expander(folder["name"]):
-                            folder_contents = get_github_contents(username, repo_choice, folder
+                            folder_contents = get_github_contents(username, repo_choice, folder["path"])
+                            if folder_contents:
+                                folder_files = [f for f in folder_contents if f["type"] == "file"]
+                                for f in folder_files:
+                                    checked = f["path"] in st.session_state.selected_files
+                                    new_val = st.checkbox(f"{folder['name']}/{f['name']}", value=checked, key=f["path"])
+                                    if new_val:
+                                        selected_files_local.add(f["path"])
+                                    else:
+                                        selected_files_local.discard(f["path"])
+                    st.session_state.selected_files = selected_files_local
+
+                if "show_selected_files_content" not in st.session_state:
+                    st.session_state.show_selected_files_content = False
+
+                if st.button("إظهار/إخفاء محتويات الملفات المحددة"):
+                    st.session_state.show_selected_files_content = not st.session_state.show_selected_files_content
+
+                if st.session_state.show_selected_files_content:
+                    if not st.session_state.selected_files:
+                        st.warning("حدد ملف واحد أو أكثر أولاً!")
+                    else:
+                        combined_text = ""
+                        for fpath in st.session_state.selected_files:
+                            file_data = None
+                            for f in files:
+                                if f["path"] == fpath:
+                                    file_data = f
+                                    break
+                            if not file_data:
+                                for folder in folders:
+                                    folder_contents = get_github_contents(username, repo_choice, folder["path"])
+                                    if folder_contents:
+                                        for ff in folder_contents:
+                                            if ff["path"] == fpath:
+                                                file_data = ff
+                                                file_data["folder_name"] = folder["name"]
+                                                break
+                            if file_data:
+                                content = get_file_content(file_data["download_url"])
+                                prefix = f"{file_data.get('folder_name', '')}/" if "folder_name" in file_data else ""
+                                combined_text += f"===== {prefix}{file_data['name']} =====\n{content}\n\n"
+
+                        st.text_area("محتويات الملفات المحددة", combined_text, height=300)
+                        copy_button(combined_text, key="combined", label="نسخ كل المحتويات")
+
+
+if __name__ == "__main__":
+    main()
