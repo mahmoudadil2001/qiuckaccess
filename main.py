@@ -72,6 +72,26 @@ def copy_button(text, key, label):
     st.components.v1.html(js, height=70)
 
 
+def list_all_files(owner, repo, path=""):
+    """
+    دالة استدعاء تكراري لجلب كل الملفات داخل مجلد path (افتراضي الجذر)
+    ترجع قائمة كل الملفات مع مساراتهم كاملة داخل المستودع.
+    """
+    all_files = []
+    contents = get_github_contents(owner, repo, path)
+    if contents is None:
+        return []
+
+    for item in contents:
+        if item["type"] == "file":
+            all_files.append(item["path"])
+        elif item["type"] == "dir":
+            # نعيد الاستدعاء للمجلد الفرعي
+            all_files.extend(list_all_files(owner, repo, item["path"]))
+
+    return all_files
+
+
 def main():
     st.title("مستعرض ملفات GitHub مع اختيار ونسخ")
 
@@ -102,6 +122,18 @@ def main():
         repo_choice = st.selectbox("اختر المستودع", repo_names)
 
         if repo_choice:
+
+            # زر جديد: استعراض كل مسارات الملفات في المستودع (recursive)
+            if st.button("عرض مسار المستودع الكامل"):
+                with st.spinner("جاري جلب كل الملفات... هذا قد يستغرق بعض الوقت"):
+                    all_files = list_all_files(username, repo_choice)
+                    if all_files:
+                        all_paths_text = "\n".join(all_files)
+                        st.text_area("مسارات جميع ملفات المستودع:", all_paths_text, height=300)
+                        copy_button(all_paths_text, key="copy_all_paths", label="نسخ مسارات جميع الملفات")
+                    else:
+                        st.warning("لم يتم العثور على ملفات في المستودع.")
+
             contents = get_github_contents(username, repo_choice)
             if contents:
                 files = [c for c in contents if c["type"] == "file"]
