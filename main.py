@@ -14,7 +14,6 @@ def get_user_repos(username):
         st.error(f"خطأ في جلب المستودعات: {r.status_code}")
         return []
 
-
 def get_github_contents(owner, repo, path=""):
     url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
     r = requests.get(url, headers=headers)
@@ -24,7 +23,6 @@ def get_github_contents(owner, repo, path=""):
         st.error(f"خطأ في جلب محتويات المستودع: {r.status_code}")
         return None
 
-
 @st.cache_data(show_spinner=False)
 def get_file_content(download_url):
     r = requests.get(download_url, headers=headers)
@@ -32,7 +30,6 @@ def get_file_content(download_url):
         return r.text
     else:
         return "⚠️ خطأ في جلب المحتوى"
-
 
 def copy_button(text, key, label):
     escaped = (
@@ -71,7 +68,6 @@ def copy_button(text, key, label):
     <div id="msg_{key}" style="display:none;color:green;font-weight:bold;margin-top:5px;">✅ تم النسخ</div>
     """
     st.components.v1.html(js, height=70)
-
 
 def main():
     st.title("مستعرض ملفات GitHub مع اختيار ونسخ")
@@ -185,7 +181,6 @@ def main():
 
                         st.text_area("محتويات الملفات المحددة", combined_text, height=300)
                         copy_button(combined_text, key="combined", label="نسخ كل المحتويات")
-
 
 if __name__ == "__main__":
     main()
