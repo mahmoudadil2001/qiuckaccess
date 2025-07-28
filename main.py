@@ -4,7 +4,6 @@ import requests
 token = st.secrets["GITHUB_TOKEN"]
 headers = {"Authorization": f"token {token}"} if token else {}
 
-
 def get_user_repos(username):
     url = f"https://api.github.com/users/{username}/repos"
     r = requests.get(url, headers=headers)
@@ -23,7 +22,8 @@ def get_github_contents(owner, repo, path=""):
         st.error(f"خطأ في جلب محتويات المستودع: {r.status_code}")
         return None
 
-@st.cache_data(show_spinner=False)
+# *** ملاحظة: تم تعطيل الكاش مؤقتًا لضمان جلب المحتوى محدث من GitHub ***
+# @st.cache_data(show_spinner=False)
 def get_file_content(download_url):
     r = requests.get(download_url, headers=headers)
     if r.status_code == 200:
@@ -71,6 +71,12 @@ def copy_button(text, key, label):
 
 def main():
     st.title("مستعرض ملفات GitHub مع اختيار ونسخ")
+
+    # زر تحديث المحتويات لجلب الملفات محدثة من GitHub
+    if st.button("🔄 تحديث المحتويات"):
+        # إذا استخدمت st.cache_data في دالتك غير هذا السطر
+        # لكن بما أننا عطلنا الكاش، الزر فقط يعيد تحميل الصفحة
+        st.experimental_rerun()
 
     # الرسالة التعريفية القابلة للفتح/الإغلاق
     if "show_intro" not in st.session_state:
