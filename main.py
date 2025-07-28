@@ -73,10 +73,6 @@ def copy_button(text, key, label):
 
 
 def list_all_files(owner, repo, path=""):
-    """
-    دالة استدعاء تكراري لجلب كل الملفات داخل مجلد path (افتراضي الجذر)
-    ترجع قائمة كل الملفات مع مساراتهم كاملة داخل المستودع.
-    """
     all_files = []
     contents = get_github_contents(owner, repo, path)
     if contents is None:
@@ -86,7 +82,6 @@ def list_all_files(owner, repo, path=""):
         if item["type"] == "file":
             all_files.append(item["path"])
         elif item["type"] == "dir":
-            # نعيد الاستدعاء للمجلد الفرعي
             all_files.extend(list_all_files(owner, repo, item["path"]))
 
     return all_files
@@ -123,8 +118,13 @@ def main():
 
         if repo_choice:
 
-            # زر جديد: استعراض كل مسارات الملفات في المستودع (recursive)
-            if st.button("عرض مسار المستودع الكامل"):
+            if "show_all_paths" not in st.session_state:
+                st.session_state.show_all_paths = False
+
+            if st.button("عرض/إخفاء مسار المستودع الكامل"):
+                st.session_state.show_all_paths = not st.session_state.show_all_paths
+
+            if st.session_state.show_all_paths:
                 with st.spinner("جاري جلب كل الملفات... هذا قد يستغرق بعض الوقت"):
                     all_files = list_all_files(username, repo_choice)
                     if all_files:
@@ -184,7 +184,6 @@ def main():
                                         selected_files_local.add(f["path"])
                                     else:
                                         selected_files_local.discard(f["path"])
-                    # حدث المحددات بعد عرض مجلدات
                     st.session_state.selected_files = selected_files_local
 
                 if "show_selected_files_content" not in st.session_state:
