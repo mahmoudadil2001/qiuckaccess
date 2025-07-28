@@ -122,10 +122,19 @@ def main():
                     else:
                         selected_files_local.discard(file["path"])
 
+                st.session_state.selected_files = selected_files_local
+
+                # زر نسخ مسارات الملفات المحددة
+                if st.session_state.selected_files:
+                    paths_text = "\n".join(st.session_state.selected_files)
+                    copy_button(paths_text, key="copy_paths", label="نسخ مسارات الملفات المحددة")
+                else:
+                    st.info("لم يتم تحديد ملفات لنسخ مساراتها.")
+
                 if "show_folders" not in st.session_state:
                     st.session_state.show_folders = False
 
-                if st.button("Show Folders"):
+                if st.button("إظهار المجلدات" if not st.session_state.show_folders else "إخفاء المجلدات"):
                     st.session_state.show_folders = not st.session_state.show_folders
 
                 if st.session_state.show_folders:
@@ -143,8 +152,8 @@ def main():
                                         selected_files_local.add(f["path"])
                                     else:
                                         selected_files_local.discard(f["path"])
-
-                st.session_state.selected_files = selected_files_local
+                    # حدث المحددات بعد عرض مجلدات
+                    st.session_state.selected_files = selected_files_local
 
                 if "show_selected_files_content" not in st.session_state:
                     st.session_state.show_selected_files_content = False
