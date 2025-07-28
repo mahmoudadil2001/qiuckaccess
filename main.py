@@ -14,6 +14,7 @@ def get_user_repos(username):
         st.error(f"خطأ في جلب المستودعات: {r.status_code}")
         return []
 
+
 def get_github_contents(owner, repo, path=""):
     url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
     r = requests.get(url, headers=headers)
@@ -23,7 +24,7 @@ def get_github_contents(owner, repo, path=""):
         st.error(f"خطأ في جلب محتويات المستودع: {r.status_code}")
         return None
 
-@st.cache_data(show_spinner=False)
+
 def get_file_content(download_url):
     r = requests.get(download_url, headers=headers)
     if r.status_code == 200:
@@ -31,14 +32,15 @@ def get_file_content(download_url):
     else:
         return "⚠️ خطأ في جلب المحتوى"
 
+
 def copy_button(text, key, label):
     escaped = (
         text.replace("\\", "\\\\")
-            .replace("`", "\\`")
-            .replace("$", "\\$")
-            .replace("\n", "\\n")
-            .replace('"', '\\"')
-            .replace("'", "\\'")
+        .replace("`", "\\`")
+        .replace("$", "\\$")
+        .replace("\n", "\\n")
+        .replace('"', '\\"')
+        .replace("'", "\\'")
     )
     js = f"""
     <script>
@@ -69,10 +71,10 @@ def copy_button(text, key, label):
     """
     st.components.v1.html(js, height=70)
 
+
 def main():
     st.title("مستعرض ملفات GitHub مع اختيار ونسخ")
 
-    # الرسالة التعريفية القابلة للفتح/الإغلاق
     if "show_intro" not in st.session_state:
         st.session_state.show_intro = False
 
@@ -112,7 +114,6 @@ def main():
 
                 selected_files_local = set()
 
-                # ملفات جذر المستودع
                 for file in files:
                     checked = file["path"] in st.session_state.selected_files
                     new_val = st.checkbox(file["name"], value=checked, key=file["path"])
@@ -121,7 +122,6 @@ def main():
                     else:
                         selected_files_local.discard(file["path"])
 
-                # زر تبديل عرض الفولدرات
                 if "show_folders" not in st.session_state:
                     st.session_state.show_folders = False
 
@@ -144,10 +144,8 @@ def main():
                                     else:
                                         selected_files_local.discard(f["path"])
 
-                # تحديث حالة الملفات المختارة في الجلسة
                 st.session_state.selected_files = selected_files_local
 
-                # زر تبديل عرض محتويات الملفات المحددة
                 if "show_selected_files_content" not in st.session_state:
                     st.session_state.show_selected_files_content = False
 
@@ -181,6 +179,7 @@ def main():
 
                         st.text_area("محتويات الملفات المحددة", combined_text, height=300)
                         copy_button(combined_text, key="combined", label="نسخ كل المحتويات")
+
 
 if __name__ == "__main__":
     main()
